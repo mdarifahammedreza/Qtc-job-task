@@ -4,6 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { JobModule } from './job/job.module';
 import { ApplicationModule } from './application/application.module';
 import type { ExecutionContext } from '@nestjs/common';
@@ -54,6 +56,8 @@ function rateLimitErrorMessage(
       getTracker,
       errorMessage: rateLimitErrorMessage,
     }),
+    AuthModule,
+    UsersModule,
     JobModule,
     ApplicationModule,
   ],

@@ -1,98 +1,150 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# QuickHire — Backend Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+**A production-style NestJS REST API for a job board: authentication, role-based access control (RBAC), jobs, and applications.**
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This document introduces the backend to reviewers. For environment setup and run instructions, see the separate setup guide.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Purpose
 
-## Project setup
+QuickHire is a job-posting and application backend built as a task for **Qtec Solution Limited**. It provides:
 
-```bash
-$ yarn install
+- User registration and JWT-based auth (access + refresh tokens)
+- Role-based access: **user**, **admin**, **super-admin**
+- Job CRUD (admin) and public-style listing/detail (authenticated user)
+- Job application submission (authenticated user)
+- User management and role updates (super-admin only)
+- Rate limiting with per-route limits and optional IP penalty
+- OpenAPI (Swagger) documentation
+
+---
+
+## Tech Stack
+
+| Layer        | Choice |
+|-------------|--------|
+| Runtime     | Node.js |
+| Framework   | NestJS 11 (Express) |
+| Language    | TypeScript 5.x |
+| Database    | MongoDB (Mongoose 9) |
+| Auth        | JWT (access + refresh), Passport, bcrypt |
+| Validation  | class-validator + ValidationPipe |
+| API docs    | Swagger/OpenAPI 3 |
+| Rate limit  | @nestjs/throttler (in-memory, per-route) |
+
+---
+
+## Architecture
+
+### High-level
+
+- **REST API** under global prefix `/api`.
+- **Bearer token** auth: client sends `Authorization: Bearer <accessToken>`.
+- **Modular structure**: Auth, Users, Job, Application; shared `common` (guards, decorators, base repository).
+
+### Folder structure
+
+```
+src/
+├── auth/                 # Register, login, refresh, logout; JWT strategy
+│   ├── dto/              # register, login, refresh-token
+│   ├── auth.module.ts
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   ├── jwt.strategy.ts
+│   └── jwt-auth.guard.ts
+├── users/                # User CRUD + role update (super-admin)
+│   ├── entities/
+│   ├── dto/
+│   ├── users.module.ts
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   └── users.repository.ts
+├── job/                  # Job listing, detail, create, delete
+│   ├── entities/
+│   ├── dto/
+│   ├── job.module.ts
+│   ├── job.controller.ts
+│   ├── job.service.ts
+│   └── job.repository.ts
+├── application/          # Submit job application
+│   ├── entities/
+│   ├── dto/
+│   ├── application.module.ts
+│   ├── application.controller.ts
+│   ├── application.service.ts
+│   └── application.repository.ts
+├── common/
+│   ├── base/
+│   │   └── base.repository.ts   # Generic MongoDB CRUD
+│   ├── decorators/
+│   │   └── roles.decorator.ts   # @Roles('admin', ...)
+│   └── guards/
+│       └── roles.guard.ts       # Role hierarchy check
+├── app.module.ts
+└── main.ts
 ```
 
-## Compile and run the project
+### Data layer
 
-```bash
-# development
-$ yarn run start
+- **MongoDB** with **Mongoose**.
+- **BaseRepository** in `common/base`: generic `findAll`, `findById`, `create`, `update`, `delete`; Job, Application, and Users repositories extend it.
+- **Entities**: User (email, hashed password, role), Job (title, company, location, category, description), Application (job_id ref, name, email, resume_link, cover_note). All use `timestamps: true`.
 
-# watch mode
-$ yarn run start:dev
+### Authentication and RBAC
 
-# production mode
-$ yarn run start:prod
-```
+- **Access token**: short-lived JWT (e.g. 15m), signed with `JWT_ACCESS_SECRET`, used as Bearer in `Authorization` header.
+- **Refresh token**: long-lived JWT (e.g. 7d), signed with `JWT_REFRESH_SECRET`; sent in request body to `POST /api/auth/refresh` to get a new access + refresh pair.
+- **Passport JWT strategy** reads the access token from `Authorization: Bearer <token>` and validates it; on success, attaches `user` (id, email, role) to the request.
+- **RolesGuard** plus **@Roles()** enforce role hierarchy: `user` &lt; `admin` &lt; `super-admin`. For example, `@Roles('admin')` allows admin and super-admin.
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ yarn run test
+## API Overview
 
-# e2e tests
-$ yarn run test:e2e
+| Area | Endpoints | Auth / Role |
+|------|-----------|--------------|
+| **Auth** | `POST /api/auth/register` | Public |
+| | `POST /api/auth/login` | Public |
+| | `POST /api/auth/refresh` | Body: `refreshToken` |
+| | `POST /api/auth/logout` | Public (client discards tokens) |
+| **Users** | `GET /api/users` | Bearer, super-admin |
+| | `GET /api/users/:id` | Bearer, super-admin |
+| | `PATCH /api/users/:id/role` | Bearer, super-admin |
+| | `DELETE /api/users/:id` | Bearer, super-admin |
+| **Jobs** | `GET /api/jobs` | Bearer, user+ |
+| | `GET /api/jobs/:id` | Bearer, user+ |
+| | `POST /api/jobs` | Bearer, admin+ |
+| | `DELETE /api/jobs/:id` | Bearer, admin+ |
+| **Applications** | `POST /api/applications` | Bearer, user+ |
 
-# test coverage
-$ yarn run test:cov
-```
+- **Swagger UI**: `GET /api/docs` (Bearer auth can be set in the UI).
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Security and Behaviour
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- **Passwords**: bcrypt (salt rounds 10).
+- **JWT**: Access and refresh use separate secrets and payload `type` to avoid misuse.
+- **Validation**: Global `ValidationPipe` (whitelist, forbidNonWhitelisted, transform).
+- **Rate limiting**: Global throttler with named limiters; per-route overrides (e.g. stricter limits + optional block duration for auth, job create/delete, application submit). Tracked by IP; 429 and optional “IP temporarily blocked” message when exceeded.
 
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Configuration (conceptual)
 
-## Resources
+Backend expects at least:
 
-Check out a few resources that may come in handy when working with NestJS:
+- `MONGODB_URI` — MongoDB connection string.
+- `JWT_ACCESS_SECRET` — Access token signing secret.
+- `JWT_REFRESH_SECRET` — Refresh token signing secret.
+- Optional: `JWT_ACCESS_EXPIRES`, `JWT_REFRESH_EXPIRES` (e.g. `15m`, `7d`), `PORT`, `NODE_ENV` (e.g. production).
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Exact setup (env files, Docker, etc.) is described in the separate setup document.
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Summary
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+QuickHire is a NestJS backend that implements a full auth + RBAC flow with Bearer JWTs, a reusable repository layer, and guarded routes for jobs and applications. It is structured for clarity and maintainability and is suitable as a base for a production job-board API.
