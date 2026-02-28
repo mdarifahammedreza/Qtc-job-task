@@ -23,8 +23,14 @@ async function bootstrap() {
     .setTitle('QuickHire')
     .setDescription('This is a job task for Qtec Solution Limited')
     .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
+      'accessToken',
+    )
+    .addTag('auth')
     .addTag('jobs')
     .addTag('applications')
+    .addTag('users')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
