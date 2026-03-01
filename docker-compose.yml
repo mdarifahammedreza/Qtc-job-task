@@ -62,7 +62,7 @@ services:
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: 1
-      NEXT_PUBLIC_API_URL: http://localhost:2021/api
+      NEXT_PUBLIC_API_URL: http://203.190.9.174:2021/api
     depends_on:
       - backend
     restart: always
