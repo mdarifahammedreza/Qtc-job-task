@@ -94,6 +94,10 @@ JWT_REFRESH_EXPIRES=7d
 
 **Swagger UI:** `GET /api/docs` (set Bearer token in the UI for protected routes).
 
+## Docker / Restart policy
+
+When run via Docker Compose (see root [README.md](../README.md)), the backend service uses **`restart: unless-stopped`**: the container restarts on failure or after a host reboot, and stays stopped only if you stop it manually. You can use **`restart: always`** instead if you prefer (both are valid).
+
 ## Structure
 
 - `src/auth/` — Register, login, refresh, JWT strategy and guard.  

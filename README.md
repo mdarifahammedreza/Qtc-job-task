@@ -24,9 +24,11 @@ cp quick-hire/.env.example .env
 docker compose up --build
 ```
 
-- **Frontend:** http://localhost:3000  
-- **Backend API:** http://localhost:3001  
-- **Swagger docs:** http://localhost:3001/api/docs  
+- **Frontend:** http://localhost:2020  
+- **Backend API:** http://localhost:2021  
+- **Swagger docs:** http://localhost:2021/api/docs  
+
+**Restart policy:** All services use `restart: unless-stopped` so containers restart on failure or after a host reboot, and stay stopped only if you stop them manually. For always-on behaviour you can use `restart: always` instead (both are valid).  
 
 ### Option 2: Run backend and frontend separately
 
@@ -49,11 +51,11 @@ docker compose up --build
    ```bash
    cd quick-hire-app
    npm install
-   # Optional: set NEXT_PUBLIC_API_URL if backend is not at http://localhost:3001/api
+   # Optional: set NEXT_PUBLIC_API_URL if backend is not at http://localhost:2021/api
    npm run dev
    ```
 
-   App runs at http://localhost:3000 (Next.js default). If the backend is on 3001, the default `NEXT_PUBLIC_API_URL` in code is already `http://localhost:3001/api`.
+   App runs at http://localhost:3000 (Next.js default). If the backend is on 2021, set `NEXT_PUBLIC_API_URL=http://localhost:2021/api` (or use the default in code).
 
 3. **Seed jobs (optional)**  
    From `quick-hire/`: `npm run seed:jobs` (requires `MONGODB_URI` in `.env`).
@@ -71,7 +73,7 @@ When using Docker Compose, you can put these in a root `.env` (or pass them into
 | `JWT_REFRESH_SECRET` | Yes (prod) | Secret for refresh JWT. Dev default in compose is set. |
 | `JWT_ACCESS_EXPIRES` | No | Access token TTL (e.g. `15m`). |
 | `JWT_REFRESH_EXPIRES` | No | Refresh token TTL (e.g. `7d`). |
-| `NEXT_PUBLIC_API_URL` | For frontend | Public API base URL (e.g. `http://localhost:3001/api`). Used by the browser to call the backend. |
+| `NEXT_PUBLIC_API_URL` | For frontend | Public API base URL (e.g. `http://localhost:2021/api`). Used by the browser to call the backend. |
 
 ### Backend (`quick-hire/`)
 
@@ -79,7 +81,7 @@ See `quick-hire/README.md` and `quick-hire/.env.example`. Main variables: `MONGO
 
 ### Frontend (`quick-hire-app/`)
 
-See `quick-hire-app/README.md`. Main variable: `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:3001/api` if unset).
+See `quick-hire-app/README.md`. Main variable: `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:2021/api` if unset).
 
 ## Production
 
@@ -88,6 +90,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
 Set in `.env`: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `NEXT_PUBLIC_API_URL` (the **public** API URL users’ browsers will use).
+
+**Restart policy:** Same as dev: `restart: unless-stopped` (or `restart: always` if you prefer).
 
 ## Build test
 

@@ -28,14 +28,14 @@ Open **http://localhost:3000**. The app will call the API at the URL set in `NEX
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | No (has default) | Backend API base URL. Must include the path prefix `/api` (e.g. `http://localhost:3001/api`). Used in the browser for all API requests. |
+| `NEXT_PUBLIC_API_URL` | No (has default) | Backend API base URL. Must include the path prefix `/api` (e.g. `http://localhost:2021/api`). Used in the browser for all API requests. |
 
-**Default:** If `NEXT_PUBLIC_API_URL` is not set, the app uses `http://localhost:3001/api`. So with the backend on port 3001 and global prefix `/api`, you can run without a `.env`.
+**Default:** If `NEXT_PUBLIC_API_URL` is not set, the app uses `http://localhost:2021/api`. With Docker Compose (root), the backend is on port 2021, so you can run without a `.env`.
 
 **Example `.env.local`:**
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=http://localhost:2021/api
 ```
 
 For production, set this to the **public** API URL (e.g. `https://api.yourdomain.com/api`). It is baked in at build time.
@@ -66,7 +66,7 @@ For production, set this to the **public** API URL (e.g. `https://api.yourdomain
 
 ## Running with the backend
 
-- **Option 1 — Docker:** From repo root, `docker compose up --build`. Frontend is at http://localhost:3000 and is configured to use the backend at http://localhost:3001/api.
-- **Option 2 — Manual:** Start the backend (e.g. `cd quick-hire && npm run start:dev` on port 3001), then here run `npm run dev`. No `.env` needed if the backend is at `http://localhost:3001/api`.
+- **Option 1 — Docker:** From repo root, `docker compose up --build`. Frontend is at http://localhost:2020 and uses the backend at http://localhost:2021/api. All services use **`restart: unless-stopped`** (or you can set **`restart: always`** in `docker-compose.yml`).
+- **Option 2 — Manual:** Start the backend (e.g. `cd quick-hire && npm run start:dev`), then here run `npm run dev`. Set `NEXT_PUBLIC_API_URL` to your backend URL (e.g. `http://localhost:2021/api`) if needed.
 
-For full setup and env vars for the whole stack, see the root [README.md](../README.md).
+For full setup, env vars, and restart policy, see the root [README.md](../README.md).

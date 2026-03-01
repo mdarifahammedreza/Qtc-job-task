@@ -10,7 +10,7 @@ services:
     networks:
       - quickhire
     ports:
-      - "27017:27017"
+      - "2022:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -19,7 +19,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15s
-    restart: unless-stopped
+    restart: always
 
   backend:
     build:
@@ -29,7 +29,7 @@ services:
     networks:
       - quickhire
     ports:
-      - "3001:3000"
+      - "3011:3000"
     volumes:
       - ./quick-hire:/app
       - /app/node_modules
@@ -44,7 +44,7 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   frontend:
     build:
@@ -54,7 +54,7 @@ services:
     networks:
       - quickhire
     ports:
-      - "3000:3000"
+      - "2020:3000"
     volumes:
       - ./quick-hire-app:/app
       - /app/node_modules
@@ -62,10 +62,10 @@ services:
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: 1
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_API_URL: http://localhost:2021/api
     depends_on:
       - backend
-    restart: unless-stopped
+    restart: always
 
 networks:
   quickhire:
