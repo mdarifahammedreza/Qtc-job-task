@@ -1,0 +1,31 @@
+# Production overrides.
+# Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# Required in .env: MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+# Set NEXT_PUBLIC_API_URL to the public API URL (e.g. https://api.yourdomain.com/api) so the browser can call the backend.
+
+services:
+  backend:
+    build:
+      context: ./quick-hire
+      dockerfile: Dockerfile.prod
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
+    # No volumes in prod
+
+  frontend:
+    build:
+      context: ./quick-hire-app
+      dockerfile: Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:3000/api}
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:3000/api}
+    # No volumes in prod

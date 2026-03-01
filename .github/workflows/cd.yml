@@ -1,0 +1,40 @@
+# CD: Build production Docker images (on main/master). Add registry login + push if you use a container registry.
+
+name: CD
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  docker-prod:
+    name: Build prod images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend (prod)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./quick-hire
+          file: ./quick-hire/Dockerfile.prod
+          push: false
+          tags: quick-hire-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend (prod)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./quick-hire-app
+          file: ./quick-hire-app/Dockerfile.prod
+          push: false
+          tags: quick-hire-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.example.com/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

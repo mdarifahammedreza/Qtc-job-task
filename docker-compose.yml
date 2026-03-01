@@ -1,6 +1,7 @@
-# QuickHire stack: backend + frontend (dev mode)
-# Run from repo root: ./run.sh  or  docker compose up --build
-# Copy .env.example to .env and adjust if needed.
+# QuickHire stack: backend + frontend
+# Dev:  docker compose up --build
+# Prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+#       Set MONGODB_URI, JWT_* and NEXT_PUBLIC_API_URL (public API URL) in .env
 
 services:
   mongo:

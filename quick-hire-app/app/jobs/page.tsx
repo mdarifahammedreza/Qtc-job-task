@@ -27,6 +27,17 @@ function JobsContent() {
   const [debouncedCategory, setDebouncedCategory] = useState(category);
   const [debouncedLocation, setDebouncedLocation] = useState(location);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevFiltersRef = useRef({
+    search: debouncedSearch,
+    category: debouncedCategory,
+    location: debouncedLocation,
+  });
+  const lastRequestRef = useRef<{
+    search: string;
+    category: string;
+    location: string;
+    page: number;
+  } | null>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -40,38 +51,68 @@ function JobsContent() {
     };
   }, [search, category, location]);
 
-  const fetchJobs = useCallback(async () => {
+  useEffect(() => {
+    const filtersChanged =
+      prevFiltersRef.current.search !== debouncedSearch ||
+      prevFiltersRef.current.category !== debouncedCategory ||
+      prevFiltersRef.current.location !== debouncedLocation;
+    if (filtersChanged) {
+      prevFiltersRef.current = {
+        search: debouncedSearch,
+        category: debouncedCategory,
+        location: debouncedLocation,
+      };
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }
+    const pageToFetch = filtersChanged ? 1 : pagination.page;
+
+    const last = lastRequestRef.current;
+    const sameRequest =
+      last !== null &&
+      last.search === debouncedSearch &&
+      last.category === debouncedCategory &&
+      last.location === debouncedLocation &&
+      last.page === pageToFetch;
+    if (sameRequest) return;
+    lastRequestRef.current = {
+      search: debouncedSearch,
+      category: debouncedCategory,
+      location: debouncedLocation,
+      page: pageToFetch,
+    };
+
+    let cancelled = false;
     setLoading(true);
-    try {
-      const response = await jobService.getAll({
+    jobService
+      .getAll({
         search: debouncedSearch || undefined,
         category: debouncedCategory || undefined,
         location: debouncedLocation || undefined,
-        page: pagination.page,
+        page: pageToFetch,
         limit: 12,
+      })
+      .then((response) => {
+        if (cancelled) return;
+        if (response.success && response.data) {
+          setJobs(response.data.jobs);
+          setPagination({
+            total: response.data.pagination.total,
+            page: response.data.pagination.page,
+            pages: response.data.pagination.pages,
+          });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('Failed to fetch jobs:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
-      if (response.success && response.data) {
-        setJobs(response.data.jobs);
-        setPagination({
-          total: response.data.pagination.total,
-          page: response.data.pagination.page,
-          pages: response.data.pagination.pages,
-        });
-      }
-    } catch (err) {
-      console.error('Failed to fetch jobs:', err);
-    } finally {
-      setLoading(false);
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedSearch, debouncedCategory, debouncedLocation, pagination.page]);
-
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, [debouncedSearch, debouncedCategory, debouncedLocation]);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
 
   const handlePageChange = useCallback((page: number) => {
     setPagination((prev) => ({ ...prev, page }));
