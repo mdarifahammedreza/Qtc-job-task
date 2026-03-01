@@ -19,7 +19,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { JobService } from './job.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -33,6 +33,7 @@ export class JobController {
 
   /** Public: list jobs with optional filters and pagination */
   @Get()
+  @SkipThrottle({ strict: true })
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   @ApiOperation({ summary: 'List jobs (public)' })
   @ApiQuery({ name: 'search', required: false })
@@ -60,7 +61,10 @@ export class JobController {
 
   /** Public: featured jobs (first 8) */
   @Get('featured')
-  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @Throttle({
+    default: { limit: 100, ttl: 60000 },
+    strict: { limit: 60, ttl: 60000 },
+  })
   @ApiOperation({ summary: 'Get featured jobs (public)' })
   @ApiResponse({ status: 200, description: 'List of featured jobs' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
@@ -71,7 +75,10 @@ export class JobController {
 
   /** Public: latest jobs (8 most recent by createdAt) */
   @Get('latest')
-  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @Throttle({
+    default: { limit: 100, ttl: 60000 },
+    strict: { limit: 60, ttl: 60000 },
+  })
   @ApiOperation({ summary: 'Get latest jobs (public)' })
   @ApiResponse({ status: 200, description: 'List of latest jobs' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
@@ -82,7 +89,10 @@ export class JobController {
 
   /** Public: get single job by id */
   @Get(':id')
-  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @Throttle({
+    default: { limit: 100, ttl: 60000 },
+    strict: { limit: 60, ttl: 60000 },
+  })
   @ApiOperation({ summary: 'Get job by id (public)' })
   @ApiParam({ name: 'id', description: 'Job ID' })
   @ApiResponse({ status: 200, description: 'Job details' })

@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { JobCard, JobFilters } from '@/app/components/jobs';
 import { jobService } from '@/services';
 import type { Job } from '@/types';
 import { Loader } from '@/app/components';
+
+const SEARCH_DEBOUNCE_MS = 500;
 
 function JobsContent() {
   const searchParams = useSearchParams();
@@ -21,14 +23,30 @@ function JobsContent() {
     page: 1,
     pages: 1,
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [debouncedCategory, setDebouncedCategory] = useState(category);
+  const [debouncedLocation, setDebouncedLocation] = useState(location);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setDebouncedCategory(category);
+      setDebouncedLocation(location);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search, category, location]);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const response = await jobService.getAll({
-        search,
-        category,
-        location,
+        search: debouncedSearch || undefined,
+        category: debouncedCategory || undefined,
+        location: debouncedLocation || undefined,
         page: pagination.page,
         limit: 12,
       });
@@ -45,12 +63,19 @@ function JobsContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, location, pagination.page]);
+  }, [debouncedSearch, debouncedCategory, debouncedLocation, pagination.page]);
 
   useEffect(() => {
-    const t = setTimeout(fetchJobs, 300);
-    return () => clearTimeout(t);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [debouncedSearch, debouncedCategory, debouncedLocation]);
+
+  useEffect(() => {
+    fetchJobs();
   }, [fetchJobs]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
+  }, []);
 
   return (
     <>
@@ -108,9 +133,7 @@ function JobsContent() {
                   <button
                     key={page}
                     type="button"
-                    onClick={() =>
-                      setPagination((prev) => ({ ...prev, page }))
-                    }
+                    onClick={() => handlePageChange(page)}
                     className={`rounded-lg px-4 py-2 font-medium transition-colors ${
                       pagination.page === page
                         ? 'bg-indigo-600 text-white'

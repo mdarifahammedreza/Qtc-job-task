@@ -27,6 +27,9 @@ export default function HomePage() {
           <Companies />
         </div>
         <section className="bg-white">
+          <Dashboard />
+        </section>
+        <section className="bg-white">
           <Suspense fallback={<Loader />}>
             <CategoriesSection />
           </Suspense>
@@ -41,9 +44,7 @@ export default function HomePage() {
             <LatestJobsSection />
           </Suspense>
         </section>
-        <section className="bg-white">
-          <Dashboard />
-        </section>
+       
       </Suspense>
     </div>
   );
