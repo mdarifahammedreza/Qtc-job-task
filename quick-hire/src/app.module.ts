@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { JobModule } from './job/job.module';
 import { ApplicationModule } from './application/application.module';
+import { CategoryModule } from './category/category.module';
 import type { ExecutionContext } from '@nestjs/common';
 import type { ThrottlerLimitDetail } from '@nestjs/throttler';
 
@@ -60,6 +61,7 @@ function rateLimitErrorMessage(
     UsersModule,
     JobModule,
     ApplicationModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [

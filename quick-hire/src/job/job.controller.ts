@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -16,6 +17,7 @@ import {
   ApiParam,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JobService } from './job.service';
@@ -29,25 +31,59 @@ import { Roles } from '../common/decorators/roles.decorator';
 export class JobController {
   constructor(private readonly jobService: JobService) {}
 
+  /** Public: list jobs with optional filters and pagination */
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-  @ApiBearerAuth('accessToken')
-  @ApiOperation({ summary: 'List all jobs' })
-  @ApiResponse({ status: 200, description: 'List of jobs' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ summary: 'List jobs (public)' })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'location', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiResponse({ status: 200, description: 'Paginated list of jobs' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
-  async list() {
-    return this.jobService.findAll();
+  async listPublic(
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+    @Query('location') location?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12', 10) || 12));
+    return this.jobService.findWithPagination(
+      { search, category, location },
+      pageNum,
+      limitNum,
+    );
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
+  /** Public: featured jobs (first 8) */
+  @Get('featured')
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-  @ApiBearerAuth('accessToken')
-  @ApiOperation({ summary: 'Get single job details' })
+  @ApiOperation({ summary: 'Get featured jobs (public)' })
+  @ApiResponse({ status: 200, description: 'List of featured jobs' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async listFeatured() {
+    const jobs = await this.jobService.findFeatured(8);
+    return { data: jobs };
+  }
+
+  /** Public: latest jobs (8 most recent by createdAt) */
+  @Get('latest')
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @ApiOperation({ summary: 'Get latest jobs (public)' })
+  @ApiResponse({ status: 200, description: 'List of latest jobs' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async listLatest() {
+    const jobs = await this.jobService.findLatest(8);
+    return { data: jobs };
+  }
+
+  /** Public: get single job by id */
+  @Get(':id')
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @ApiOperation({ summary: 'Get job by id (public)' })
   @ApiParam({ name: 'id', description: 'Job ID' })
   @ApiResponse({ status: 200, description: 'Job details' })
   @ApiResponse({ status: 404, description: 'Job not found' })

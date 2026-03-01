@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { JobRepository } from './job.repository';
+import {
+  JobRepository,
+  JobFilter,
+  PaginationResult,
+} from './job.repository';
 import { CreateJobDto } from './dto/create-job.dto';
 import { JobDocument } from './entities/job.entity';
 
@@ -9,6 +13,14 @@ export class JobService {
 
   async findAll(): Promise<JobDocument[]> {
     return this.jobRepository.findAll();
+  }
+
+  async findWithPagination(
+    filter: JobFilter,
+    page = 1,
+    limit = 12,
+  ): Promise<PaginationResult> {
+    return this.jobRepository.findWithPagination(filter, page, limit);
   }
 
   async findOne(id: string): Promise<JobDocument> {
@@ -28,5 +40,13 @@ export class JobService {
     if (!deleted) {
       throw new NotFoundException(`Job with id ${id} not found`);
     }
+  }
+
+  async findFeatured(limit = 8): Promise<JobDocument[]> {
+    return this.jobRepository.findFeatured(limit);
+  }
+
+  async findLatest(limit = 8): Promise<JobDocument[]> {
+    return this.jobRepository.findLatest(limit);
   }
 }
