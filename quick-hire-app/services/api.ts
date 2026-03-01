@@ -10,7 +10,7 @@ export const BASE_URL =
     ? process.env.NEXT_PUBLIC_API_URL
     : typeof window !== 'undefined'
       ? '/api'
-      : 'http://localhost:2021/api';
+      : 'http://203.190.9.174:3011/api';
 
 export async function apiFetch<T>(
   path: string,
